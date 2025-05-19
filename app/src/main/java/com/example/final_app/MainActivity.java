@@ -6,6 +6,8 @@ import android.media.Image;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import androidx.databinding.DataBindingUtil;
+import com.example.final_app.databinding.ActivityMainBinding;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,19 +29,20 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
+    private ActivityMainBinding binding; // 注意变量名改成小写开头
     private static final int REQUEST_CODE_CAMERA = 1001;
-    private PreviewView previewView;
     private PoseDetector poseDetector;
     private ExecutorService cameraExecutor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
-        previewView = findViewById(R.id.previewView);
+        // 初始化 DataBinding
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        binding.setPoseText("准备识别中...");
 
-        // 初始化 Pose Detector（流式检测）
+        // 初始化 Pose Detector（流式）
         PoseDetectorOptions options = new PoseDetectorOptions.Builder()
                 .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
                 .build();
@@ -65,36 +68,57 @@ public class MainActivity extends AppCompatActivity {
             try {
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
 
-                // 预览
                 Preview preview = new Preview.Builder().build();
-                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+                preview.setSurfaceProvider(binding.previewView.getSurfaceProvider());
 
-                // 后置摄像头
                 CameraSelector cameraSelector = new CameraSelector.Builder()
                         .requireLensFacing(CameraSelector.LENS_FACING_BACK)
                         .build();
 
-                // 图像分析（绑定 analyzer）
                 ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build();
                 imageAnalysis.setAnalyzer(cameraExecutor, new PoseAnalyzer());
 
-                // 绑定生命周期和组件
                 cameraProvider.unbindAll();
                 cameraProvider.bindToLifecycle(
-                        (LifecycleOwner) this,
+                        this,
                         cameraSelector,
                         preview,
                         imageAnalysis
                 );
 
-                Log.d("Camera", "Camera initialized and bound successfully");
+                Log.d("Camera", "Camera initialized");
 
             } catch (Exception e) {
                 Log.e("Camera", "Failed to start camera", e);
             }
         }, ContextCompat.getMainExecutor(this));
+    }
+
+    private class PoseAnalyzer implements ImageAnalysis.Analyzer {
+
+        @androidx.camera.core.ExperimentalGetImage
+        @Override
+        public void analyze(@NonNull ImageProxy imageProxy) {
+            Image mediaImage = imageProxy.getImage();
+            if (mediaImage != null) {
+                InputImage image = InputImage.fromMediaImage(mediaImage,
+                        imageProxy.getImageInfo().getRotationDegrees());
+
+                poseDetector.process(image)
+                        .addOnSuccessListener(pose -> {
+                            int count = pose.getAllPoseLandmarks().size();
+                            runOnUiThread(() -> binding.setPoseText("关键点数量：" + count));
+                            Log.d("PoseDetection", "Landmarks detected: " + count);
+                        })
+                        .addOnFailureListener(e ->
+                                Log.e("PoseDetection", "Detection failed", e))
+                        .addOnCompleteListener(task -> imageProxy.close());
+            } else {
+                imageProxy.close();
+            }
+        }
     }
 
     @Override
@@ -108,45 +132,13 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.e("Permission", "Camera permission denied");
         }
-
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
-
-    private class PoseAnalyzer implements ImageAnalysis.Analyzer {
-
-        @androidx.camera.core.ExperimentalGetImage
-        @Override
-        public void analyze(@NonNull ImageProxy imageProxy) {
-            Log.d("PoseAnalyzer", "analyze() called");
-
-            Image mediaImage = imageProxy.getImage();
-            if (mediaImage != null) {
-                InputImage image = InputImage.fromMediaImage(
-                        mediaImage, imageProxy.getImageInfo().getRotationDegrees());
-
-                poseDetector.process(image)
-                        .addOnSuccessListener(pose -> {
-                            int count = pose.getAllPoseLandmarks().size();
-                            Log.d("PoseDetection", "Landmarks detected: " + count);
-                        })
-                        .addOnFailureListener(e ->
-                                Log.e("PoseDetection", "Pose detection failed", e))
-                        .addOnCompleteListener(task -> imageProxy.close());
-            } else {
-                Log.e("PoseAnalyzer", "mediaImage is null");
-                imageProxy.close();
-            }
-        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (poseDetector != null) {
-            poseDetector.close();
-        }
-        if (cameraExecutor != null) {
-            cameraExecutor.shutdown();
-        }
+        if (poseDetector != null) poseDetector.close();
+        if (cameraExecutor != null) cameraExecutor.shutdown();
     }
 }
