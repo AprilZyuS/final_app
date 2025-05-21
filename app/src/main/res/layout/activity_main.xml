@@ -27,8 +27,27 @@
             android:layout_height="match_parent"
             android:textColor="#FFFFFF"
             android:layout_margin="16dp"
-            android:text="@{poseText}"/>  <!-- 用变量绑定文本 -->
+            android:text="@{poseText}" />
 
-
+        <Button
+            android:id="@+id/getpose"
+            android:layout_width="84dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="16dp"
+            android:text="pose"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:ignore="MissingConstraints" />
+        <Button
+            android:id="@+id/test"
+            android:layout_width="84dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="16dp"
+            android:text="test"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@id/getpose"
+            tools:ignore="MissingConstraints" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

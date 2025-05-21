@@ -1,0 +1,40 @@
+com.example.testcamera-constraintlayout-2.1.4-0 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\03d4633c16faf709f4c3901258be11a7\transformed\constraintlayout-2.1.4\res
+com.example.testcamera-camera-extensions-1.3.1-1 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\098d82c0788734a2a2c6a31bd82843c8\transformed\camera-extensions-1.3.1\res
+com.example.testcamera-lifecycle-livedata-2.6.1-2 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\0e42c457d4c728e93661a60f0152b8fc\transformed\lifecycle-livedata-2.6.1\res
+com.example.testcamera-camera-view-1.3.1-3 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\110e17dfaa1f32bbae930a812c1422a5\transformed\camera-view-1.3.1\res
+com.example.testcamera-recyclerview-1.1.0-4 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\1f1206eb4c6855c08e75a3da62467e54\transformed\recyclerview-1.1.0\res
+com.example.testcamera-transition-1.2.0-5 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\260a25472652bbdc25624d67ed0f8ace\transformed\transition-1.2.0\res
+com.example.testcamera-profileinstaller-1.3.0-6 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\26bacd85a5b1733b59fc65d605135e34\transformed\profileinstaller-1.3.0\res
+com.example.testcamera-lifecycle-process-2.6.1-7 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\27f277f9082c031bece8a29741d8b119\transformed\lifecycle-process-2.6.1\res
+com.example.testcamera-coordinatorlayout-1.1.0-8 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\2cc6e0cbc6cce4079f2dae0e7e770f76\transformed\coordinatorlayout-1.1.0\res
+com.example.testcamera-core-1.9.0-9 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\31c25ffd92ead36630b89c071c6b528f\transformed\core-1.9.0\res
+com.example.testcamera-emoji2-views-helper-1.2.0-10 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\4cabaf0cffa3d55fa484154879eb6369\transformed\emoji2-views-helper-1.2.0\res
+com.example.testcamera-annotation-experimental-1.3.1-11 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\535e5ffbde3ef5863526cc73e838cf3e\transformed\annotation-experimental-1.3.1\res
+com.example.testcamera-fragment-1.3.6-12 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\55bff7c16e5473465d328a0773b4bbf9\transformed\fragment-1.3.6\res
+com.example.testcamera-camera-lifecycle-1.3.1-13 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\56fa2b2167de5054790d48a319c976f1\transformed\camera-lifecycle-1.3.1\res
+com.example.testcamera-lifecycle-viewmodel-savedstate-2.6.1-14 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\5fe859af7a3748b72a238da09b479031\transformed\lifecycle-viewmodel-savedstate-2.6.1\res
+com.example.testcamera-camera-core-1.3.1-15 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\66485b6ab19ffb2550adc605fcb22134\transformed\camera-core-1.3.1\res
+com.example.testcamera-lifecycle-viewmodel-2.6.1-16 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\6c4798ce123e46fc047153bc6965158c\transformed\lifecycle-viewmodel-2.6.1\res
+com.example.testcamera-lifecycle-livedata-core-2.6.1-17 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\718745a6ac2259e785a8a88e3399b1c0\transformed\lifecycle-livedata-core-2.6.1\res
+com.example.testcamera-emoji2-1.2.0-18 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\84b89331fafdfa3b35eba27b7f5f26d6\transformed\emoji2-1.2.0\res
+com.example.testcamera-lifecycle-runtime-2.6.1-19 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\86e1291ea95a7112aec3bae4b7a19afe\transformed\lifecycle-runtime-2.6.1\res
+com.example.testcamera-appcompat-1.6.1-20 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\9ae83b6d30aa9eb6979aa6db5bedc3bf\transformed\appcompat-1.6.1\res
+com.example.testcamera-activity-1.8.0-21 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\a538b722079fdd873471e741f9e39613\transformed\activity-1.8.0\res
+com.example.testcamera-camera-video-1.3.1-22 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\be37baa2321be21c3ea0101073febc2d\transformed\camera-video-1.3.1\res
+com.example.testcamera-viewpager2-1.0.0-23 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\c78acfd87beae08e0f83de6b90471d12\transformed\viewpager2-1.0.0\res
+com.example.testcamera-savedstate-1.2.1-24 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\e5a8e20b0856e07663427889ebc6b79c\transformed\savedstate-1.2.1\res
+com.example.testcamera-drawerlayout-1.1.1-25 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\e659a85ec6fc889785f58cb797aa8632\transformed\drawerlayout-1.1.1\res
+com.example.testcamera-cardview-1.0.0-26 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\eb97b796c976d2c3bb32ea41d03d1534\transformed\cardview-1.0.0\res
+com.example.testcamera-startup-runtime-1.1.1-27 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\ebd7bfdc95df1f51040127c4a726002d\transformed\startup-runtime-1.1.1\res
+com.example.testcamera-material-1.10.0-28 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\ee28c14e52cf4f0d5abafcf313c1b9d3\transformed\material-1.10.0\res
+com.example.testcamera-camera-camera2-1.3.1-29 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\ef5e3d6230565891682bf3557250d334\transformed\camera-camera2-1.3.1\res
+com.example.testcamera-core-runtime-2.2.0-30 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\f62d4d5745ef49e9127351473bf77a31\transformed\core-runtime-2.2.0\res
+com.example.testcamera-core-ktx-1.9.0-31 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\fe60943bf50885de8270c9ed2ae40336\transformed\core-ktx-1.9.0\res
+com.example.testcamera-appcompat-resources-1.6.1-32 C:\Users\lenovo\.gradle\caches\8.10.2\transforms\ff5dc36392008838a66a1d63d1c61dee\transformed\appcompat-resources-1.6.1\res
+com.example.testcamera-pngs-33 D:\Timesfaner\workspace\Androidstudio\experiment1 (2)\experiment1\testcamera\build\generated\res\pngs\debug
+com.example.testcamera-resValues-34 D:\Timesfaner\workspace\Androidstudio\experiment1 (2)\experiment1\testcamera\build\generated\res\resValues\debug
+com.example.testcamera-packageDebugResources-35 D:\Timesfaner\workspace\Androidstudio\experiment1 (2)\experiment1\testcamera\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.example.testcamera-packageDebugResources-36 D:\Timesfaner\workspace\Androidstudio\experiment1 (2)\experiment1\testcamera\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.example.testcamera-debug-37 D:\Timesfaner\workspace\Androidstudio\experiment1 (2)\experiment1\testcamera\build\intermediates\merged_res\debug\mergeDebugResources
+com.example.testcamera-debug-38 D:\Timesfaner\workspace\Androidstudio\experiment1 (2)\experiment1\testcamera\src\debug\res
+com.example.testcamera-main-39 D:\Timesfaner\workspace\Androidstudio\experiment1 (2)\experiment1\testcamera\src\main\res
