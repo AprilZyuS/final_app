@@ -3,11 +3,18 @@ package com.example.final_app;
 import static java.lang.Math.atan2;
 
 import android.Manifest;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.Image;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.OptIn;
@@ -48,6 +55,9 @@ public class MainActivity extends AppCompatActivity {
     private ExecutorService cameraExecutor;
     private ImageProxy latestImageProxy;
 
+    private Handler handler;
+    private Runnable runnable;
+
     @OptIn(markerClass = ExperimentalGetImage.class) @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -72,17 +82,31 @@ public class MainActivity extends AppCompatActivity {
         } else {
             startCamera();
         }
+        //文本检测更新
+        textUpdate();
         binding.getpose.setOnClickListener(v -> {
+
             if (latestImageProxy != null) {
                 savePoseAnglesToCSV(latestImageProxy);
-               // savePoseToCSV(latestImageProxy);
-                Toast.makeText(this, "正在保存姿势数据...", Toast.LENGTH_SHORT).show();
+                savePoseToCSV(latestImageProxy);
+//                Toast.makeText(this, "正在保存姿势数据...", Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(this, "没有可用的图像数据", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(this, "没有可用的图像数据", Toast.LENGTH_SHORT).show();
 
             }
         });
-        binding.test.setOnClickListener(v -> testimage());
+        binding.test.setOnClickListener(v -> testimage(getResources().getString(R.string.anglesfile_name)));
+
+        handler = new Handler(Looper.getMainLooper());
+        runnable = new Runnable() {
+            @Override
+            public void run() {
+                testimage(getResources().getString(R.string.anglesfile_name)); // 调用 test 方法
+                handler.postDelayed(this, 1000); // 每 0.5 秒调用一次
+            }
+        };
+
+        handler.post(runnable); // 开始计时器
     }
 
     private void startCamera() {
@@ -149,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
 
 
                         // 写入数据到文件
-                        try (FileWriter writer = new FileWriter(csvFile, true)) {
+                        try (FileWriter writer = new FileWriter(csvFile, false)) {
                             // 写入 CSV 表头（如果文件为空）
                             if (csvFile.length() == 0) {
                                 writer.append("Landmark, X, Y\n");
@@ -157,7 +181,7 @@ public class MainActivity extends AppCompatActivity {
                             writer.append(csvData.toString());
                             writer.flush();
                         } catch (Exception e) {
-                            Toast.makeText(this, "保存失败", Toast.LENGTH_SHORT).show();
+//                            Toast.makeText(this, "保存失败", Toast.LENGTH_SHORT).show();
                             Log.e("CSV", "Failed to write pose data", e);
                         }
                     })
@@ -169,10 +193,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 //判断
-public void testimage() {
-    File csvFile = new File(getExternalFilesDir(null), "pose_data1.csv");
+public void testimage( String path) {
+    File csvFile = new File(getExternalFilesDir(null), path);
     if (!csvFile.exists()) {
-        Toast.makeText(this, "CSV 文件不存在", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(this, "CSV 文件不存在", Toast.LENGTH_SHORT).show();
         Log.e("CSV", "CSV 文件不存在: " + csvFile.getAbsolutePath());
         return;
     }
@@ -182,13 +206,24 @@ public void testimage() {
         List<String> savedPoseData = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
             String line;
-            reader.readLine(); // 跳过表头
+            int lineNumber = 0;
             while ((line = reader.readLine()) != null) {
-                savedPoseData.add(line);
+                lineNumber++;
+                if (lineNumber == 1 && line.contains("Landmark, Angle")) {
+                    // 跳过表头
+                    continue;
+                }
+                if (!line.trim().isEmpty() && line.contains(",")) {
+                    savedPoseData.add(line);
+                } else {
+                    Log.w("CSV", "跳过无效行: " + lineNumber + " 内容: " + line);
+                }
             }
-        }catch (Exception e) {
-            Toast.makeText(this, "读取 CSV 文件2失败", Toast.LENGTH_SHORT).show();
-            Log.e("CSV", "Failed to read CSV file", e);
+        }
+
+        if (savedPoseData.isEmpty()) {
+//            Toast.makeText(this, "CSV 文件没有有效数据", Toast.LENGTH_SHORT).show();
+            Log.e("CSV", "CSV 文件没有有效数据");
             return;
         }
 
@@ -204,33 +239,39 @@ public void testimage() {
                 poseDetector.process(currentImage)
                         .addOnSuccessListener(pose -> {
                             List<String> currentPoseData = new ArrayList<>();
-                            pose.getAllPoseLandmarks().forEach(landmark -> {
-                                currentPoseData.add(landmark.getLandmarkType() + ", " +
-                                        landmark.getPosition().x + ", " +
-                                        landmark.getPosition().y);
-                            });
+                            List<PoseLandmark> landmarks = pose.getAllPoseLandmarks();
+                            // 计算当前角度数据
+                            for (int i = 0; i < landmarks.size() - 2; i++) {
+                                PoseLandmark first = landmarks.get(i);
+                                PoseLandmark mid = landmarks.get(i + 1);
+                                PoseLandmark last = landmarks.get(i + 2);
 
+                                double angle = getAngle(first, mid, last);
+                                currentPoseData.add(mid.getLandmarkType() + ", " + angle);
+                            }
                             // 比较姿势数据
-                            if (isPoseSimilarByAngle(savedPoseData, currentPoseData, 5.0)) { // 允许误差为 5.0 度
+                            if (isPoseSimilarByAngle(savedPoseData, currentPoseData, 20.0)) { // 允许误差为 10.0 度
                                 Toast.makeText(this, "姿势一致", Toast.LENGTH_SHORT).show();
+                                Intent intent = new Intent(this, CameraPageActivity.class);
+                                startActivity(intent);
                             } else {
-                                Toast.makeText(this, "姿势不一致", Toast.LENGTH_SHORT).show();
+//                                Toast.makeText(this, "姿势不一致", Toast.LENGTH_SHORT).show();
                             }
                         })
                         .addOnFailureListener(e -> {
-                            Toast.makeText(this, "检测当前姿势失败", Toast.LENGTH_SHORT).show();
+//                            Toast.makeText(this, "检测当前姿势失败", Toast.LENGTH_SHORT).show();
                             Log.e("PoseDetection", "Failed to detect current pose", e);
                         });
             } else {
-                Toast.makeText(this, "没有可用的图像数据", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(this, "没有可用的图像数据", Toast.LENGTH_SHORT).show();
                 Log.e("PoseDetection", "MediaImage is null");
             }
         } else {
-            Toast.makeText(this, "没有可用的图像数据", Toast.LENGTH_SHORT).show();
+//            Toast.makeText(this, "没有可用的图像数据", Toast.LENGTH_SHORT).show();
             Log.e("PoseDetection", "Latest ImageProxy is null");
         }
     } catch (Exception e) {
-        Toast.makeText(this, "读取 CSV 文件失败", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(this, "读取 CSV 文件失败", Toast.LENGTH_SHORT).show();
         Log.e("CSV", "Failed to read CSV file", e);
     }
 }
@@ -239,7 +280,10 @@ public void testimage() {
             return false; // 数据长度不一致
         }
 
-        for (int i = 0; i < savedPoseData.size(); i++) {
+        int matchCount = 0; // 符合误差范围的角度数量
+        int totalCount = savedPoseData.size();
+
+        for (int i = 0; i < totalCount; i++) {
             String[] savedParts = savedPoseData.get(i).split(", ");
             String[] currentParts = currentPoseData.get(i).split(", ");
 
@@ -252,16 +296,16 @@ public void testimage() {
                 double currentAngle = Double.parseDouble(currentParts[1]);
 
                 // 比较角度误差
-                if (Math.abs(savedAngle - currentAngle) > tolerance) {
-                    return false; // 超出误差范围
+                if (Math.abs(savedAngle - currentAngle) <= tolerance) {
+                    matchCount++; // 符合误差范围
                 }
             } catch (NumberFormatException e) {
                 Log.e("PoseComparison", "数据格式错误", e);
-                return false;
             }
         }
 
-        return true; // 所有角度都在误差范围内
+        // 判断符合误差范围的角度是否达到 85%
+        return matchCount >= totalCount * 0.85;
     }
     private boolean isPoseSimilar(List<String> savedPoseData, List<String> currentPoseData, double tolerance) {
         if (savedPoseData.size() != currentPoseData.size()) {
@@ -316,7 +360,7 @@ public void testimage() {
             return;
         }
 
-        File csvFile = new File(getExternalFilesDir(null), "pose_angles.csv");
+        File csvFile = new File(getExternalFilesDir(null), getResources().getString(R.string.anglesfile_name));
         try {
             InputImage lastImage = InputImage.fromMediaImage(mediaImage,
                     imageProxy.getImageInfo().getRotationDegrees());
@@ -337,7 +381,7 @@ public void testimage() {
                                     .append(angle).append("\n");
                         }
 
-                        try (FileWriter writer = new FileWriter(csvFile, true)) {
+                        try (FileWriter writer = new FileWriter(csvFile,false)) {
                             if (csvFile.length() == 0) {
                                 writer.append("Landmark, Angle\n");
                             }
@@ -354,6 +398,33 @@ public void testimage() {
             Log.e("CSV", "Failed to process image or write to CSV file", e);
             imageProxy.close();
         }
+    }
+
+    public void textUpdate() {
+        EditText editText = findViewById(R.id.editText);
+        SharedPreferences sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+
+// 初始化文本框内容
+        String savedFileName = sharedPreferences.getString("anglesfile_name", "angles");
+        editText.setText(savedFileName);
+
+// 监听文本框输入变化
+        editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // 实时保存输入的文件名
+                editor.putString("anglesfile_name", s.toString());
+                editor.apply();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
     }
     private class PoseAnalyzer implements ImageAnalysis.Analyzer {
 
@@ -407,5 +478,8 @@ public void testimage() {
         super.onDestroy();
         if (poseDetector != null) poseDetector.close();
         if (cameraExecutor != null) cameraExecutor.shutdown();
+        if (handler != null && runnable != null) {
+            handler.removeCallbacks(runnable); // 停止计时器
+        }
     }
 }
