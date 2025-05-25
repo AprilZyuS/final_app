@@ -53,4 +53,5 @@ dependencies {
     implementation(libs.camera.view)
     implementation(libs.camera.extensions)
 
+    implementation(libs.okhttp)
 }

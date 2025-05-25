@@ -39,14 +39,33 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import okhttp3.*;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.util.concurrent.TimeUnit;
+
+import java.io.*;
+
 @OptIn(markerClass = androidx.camera.core.ExperimentalGetImage.class)
 public class MainActivity extends AppCompatActivity {
+
+    private AudioRecorder audioRecorder;
+    private File pcmFile;
 
     private ActivityMainBinding binding; // 注意变量名改成小写开头
     private static final int REQUEST_CODE_CAMERA = 1001;
     private PoseDetector poseDetector;
     private ExecutorService cameraExecutor;
     private ImageProxy latestImageProxy;
+    private File outputFile;
+    private static final int REQUEST_CODE_AUDIO = 1002;
+
+    public static final String API_KEY = "KvxFTc7dONouid47RKfqnGk8";
+    public static final String SECRET_KEY = "gk6AQwC4Rm7EIpI7Sv0L5piTlC7ni3zs";
+
+    public static final OkHttpClient HTTP_CLIENT = new OkHttpClient().newBuilder().readTimeout(300, TimeUnit.SECONDS).build();
 
     @OptIn(markerClass = ExperimentalGetImage.class) @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +75,9 @@ public class MainActivity extends AppCompatActivity {
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
         binding.setPoseText("准备识别中...");
 
+        pcmFile = new File(getExternalFilesDir(null), "test_audio.pcm");
+
+
         // 初始化 Pose Detector（流式）
         PoseDetectorOptions options = new PoseDetectorOptions.Builder()
                 .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
@@ -64,7 +86,9 @@ public class MainActivity extends AppCompatActivity {
 
         cameraExecutor = Executors.newSingleThreadExecutor();
 
-        // 权限检查
+        audioRecorder = new AudioRecorder(pcmFile);
+
+        // camera权限检查
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
@@ -72,6 +96,15 @@ public class MainActivity extends AppCompatActivity {
         } else {
             startCamera();
         }
+        //audio权限检查
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_CODE_AUDIO);
+        } else {
+            audioRecorder.startRecording(); // 权限已通过，开始录音
+        }
+
         binding.getpose.setOnClickListener(v -> {
             if (latestImageProxy != null) {
                 savePoseAnglesToCSV(latestImageProxy);
@@ -83,6 +116,81 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         binding.test.setOnClickListener(v -> testimage());
+    }
+
+    public interface RecognitionCallback {
+        void onResult(String result);
+    }
+
+    public static void CheckAuthority(File pcmFile, RecognitionCallback callback) {
+        try {
+            String accessToken = getAccessToken();
+            byte[] audioData = readFileToBytes(pcmFile);
+            String speechBase64 = android.util.Base64.encodeToString(audioData, android.util.Base64.NO_WRAP);
+
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("format", "pcm");
+            jsonObject.put("rate", 16000);
+            jsonObject.put("channel", 1);
+            jsonObject.put("token", accessToken);
+            jsonObject.put("cuid", "device-android");
+            jsonObject.put("len", audioData.length);
+            jsonObject.put("speech", speechBase64);
+
+            RequestBody body = RequestBody.create(
+                    MediaType.parse("application/json"), jsonObject.toString());
+
+            Request request = new Request.Builder()
+                    .url("https://vop.baidu.com/server_api")
+                    .post(body)
+                    .build();
+
+            Response response = HTTP_CLIENT.newCall(request).execute();
+
+            if (response.isSuccessful()) {
+                String result = response.body().string();
+                JSONObject resultJson = new JSONObject(result);
+                if (resultJson.has("result")) {
+                    String recognizedText = resultJson.getJSONArray("result").getString(0);
+                    callback.onResult(recognizedText);
+                } else {
+                    callback.onResult("识别失败：" + resultJson.toString());
+                }
+            } else {
+                callback.onResult("请求失败：" + response.code());
+            }
+
+        } catch (Exception e) {
+            Log.e("BaiduSpeech", "识别异常", e);
+            callback.onResult("异常: " + e.getMessage());
+        }
+    }
+
+    private static byte[] readFileToBytes(File file) throws IOException {
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+             FileInputStream fis = new FileInputStream(file)) {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = fis.read(buffer)) != -1) {
+                bos.write(buffer, 0, bytesRead);
+            }
+            return bos.toByteArray();
+        }
+    }
+
+
+    @NonNull
+    static String getAccessToken() throws IOException {
+        MediaType mediaType = MediaType.parse("application/x-www-form-urlencoded");
+        RequestBody body = RequestBody.create(mediaType, "grant_type=client_credentials&client_id=" + API_KEY
+                + "&client_secret=" + SECRET_KEY);
+        Request request = new Request.Builder()
+                .url("https://aip.baidubce.com/oauth/2.0/token")
+                .method("POST", body)
+                .addHeader("Content-Type", "application/x-www-form-urlencoded")
+                .build();
+        Response response = HTTP_CLIENT.newCall(request).execute();
+        return new JSONObject(response.body().string()).getString("access_token");
     }
 
     private void startCamera() {
@@ -120,6 +228,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }, ContextCompat.getMainExecutor(this));
     }
+
 
     // 保存姿势数据到 CSV 文件
     @androidx.camera.core.ExperimentalGetImage
@@ -389,18 +498,24 @@ public void testimage() {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_CODE_CAMERA &&
-                grantResults.length > 0 &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            startCamera();
-        } else {
-            Log.e("Permission", "Camera permission denied");
-        }
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_CODE_CAMERA) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startCamera();
+            } else {
+                Toast.makeText(this, "未授权相机权限", Toast.LENGTH_SHORT).show();
+            }
+        } else if (requestCode == REQUEST_CODE_AUDIO) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                audioRecorder.startRecording();
+            } else {
+                Toast.makeText(this, "未授权录音权限", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
+
 
     @Override
     protected void onDestroy() {
