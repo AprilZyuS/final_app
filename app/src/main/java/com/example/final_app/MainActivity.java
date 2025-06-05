@@ -109,6 +109,8 @@ public class MainActivity extends AppCompatActivity {
         handler.post(runnable); // 开始计时器
     }
 
+
+
     private void startCamera() {
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
                 ProcessCameraProvider.getInstance(this);
@@ -255,7 +257,7 @@ public void testimage( String path) {
                                 Intent intent = new Intent(this, CameraPageActivity.class);
                                 startActivity(intent);
                             } else {
-//                                Toast.makeText(this, "姿势不一致", Toast.LENGTH_SHORT).show();
+//                               Toast.makeText(this, "姿势不一致", Toast.LENGTH_SHORT).show();
                             }
                         })
                         .addOnFailureListener(e -> {
