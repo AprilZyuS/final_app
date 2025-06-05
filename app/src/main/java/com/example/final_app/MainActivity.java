@@ -58,9 +58,19 @@ public class MainActivity extends AppCompatActivity {
     private Handler handler;
     private Runnable runnable;
 
+    private int currentLevel = 0; // 当前关卡
+    private final List<String> targetPoses = new ArrayList<>(); // 每关的目标姿势数据
+    private String anglesFileName; // 用于保存角度数据的文件名
+
     @OptIn(markerClass = ExperimentalGetImage.class) @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        currentLevel = 0;
+        // 初始化目标姿势数据（示例）
+        targetPoses.add("pos1.csv"); // 第一关目标姿势文件
+        targetPoses.add("pos2.csv"); // 第二关目标姿势文件
+        targetPoses.add("pos3.csv"); // 第三关目标姿势文件
+        anglesFileName = targetPoses.get(currentLevel); // 初始化为第一关的目标姿势文件名
 
         // 初始化 DataBinding
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
@@ -82,8 +92,11 @@ public class MainActivity extends AppCompatActivity {
         } else {
             startCamera();
         }
+
+
         //文本检测更新
         textUpdate();
+
         binding.getpose.setOnClickListener(v -> {
 
             if (latestImageProxy != null) {
@@ -95,18 +108,17 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-        binding.test.setOnClickListener(v -> testimage(getResources().getString(R.string.anglesfile_name)));
-
-        handler = new Handler(Looper.getMainLooper());
-        runnable = new Runnable() {
-            @Override
-            public void run() {
-                testimage(getResources().getString(R.string.anglesfile_name)); // 调用 test 方法
-                handler.postDelayed(this, 1000); // 每 0.5 秒调用一次
-            }
-        };
-
-        handler.post(runnable); // 开始计时器
+        binding.test.setOnClickListener(v -> testimage(anglesFileName));//getResources().getString(R .string.anglesfile_name)));
+//
+//        handler = new Handler(Looper.getMainLooper());
+//        runnable = new Runnable() {
+//            @Override
+//            public void run() {
+//                testimage(anglesFileName); // 调用 test 方法
+//                handler.postDelayed(this, 1000); // 每 0.5 秒调用一次
+//            }
+//        };
+//        handler.post(runnable); // 开始计时器
     }
 
     private void startCamera() {
@@ -200,7 +212,7 @@ public void testimage( String path) {
         Log.e("CSV", "CSV 文件不存在: " + csvFile.getAbsolutePath());
         return;
     }
-
+    anglesFileName = targetPoses.get(currentLevel); // 获取当前关卡的目标姿势文件名
     try {
         // 读取 CSV 文件中的姿势数据
         List<String> savedPoseData = new ArrayList<>();
@@ -251,9 +263,17 @@ public void testimage( String path) {
                             }
                             // 比较姿势数据
                             if (isPoseSimilarByAngle(savedPoseData, currentPoseData, 20.0)) { // 允许误差为 10.0 度
-                                Toast.makeText(this, "姿势一致", Toast.LENGTH_SHORT).show();
-                                Intent intent = new Intent(this, CameraPageActivity.class);
-                                startActivity(intent);
+                                if(currentLevel < targetPoses.size() - 1) {
+                                    currentLevel++; // 进入下一关
+                            Toast.makeText(this, "姿势一致，进入下一关"+currentLevel, Toast.LENGTH_SHORT).show();
+                                    anglesFileName = targetPoses.get(currentLevel);
+                                } else {
+                                    currentLevel = 0; // 重置关卡
+                                    Toast.makeText(this, "姿势一致", Toast.LENGTH_SHORT).show();
+                                    Intent intent = new Intent(this, CameraPageActivity.class);
+                                    startActivity(intent);
+                                }
+
                             } else {
 //                                Toast.makeText(this, "姿势不一致", Toast.LENGTH_SHORT).show();
                             }
@@ -360,7 +380,7 @@ public void testimage( String path) {
             return;
         }
 
-        File csvFile = new File(getExternalFilesDir(null), getResources().getString(R.string.anglesfile_name));
+        File csvFile = new File(getExternalFilesDir(null), anglesFileName);
         try {
             InputImage lastImage = InputImage.fromMediaImage(mediaImage,
                     imageProxy.getImageInfo().getRotationDegrees());
@@ -406,8 +426,7 @@ public void testimage( String path) {
         SharedPreferences.Editor editor = sharedPreferences.edit();
 
 // 初始化文本框内容
-        String savedFileName = sharedPreferences.getString("anglesfile_name", "angles");
-        editText.setText(savedFileName);
+        editText.setText(anglesFileName);
 
 // 监听文本框输入变化
         editText.addTextChangedListener(new TextWatcher() {
@@ -416,9 +435,7 @@ public void testimage( String path) {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // 实时保存输入的文件名
-                editor.putString("anglesfile_name", s.toString());
-                editor.apply();
+                anglesFileName = s.toString();
             }
 
             @Override
