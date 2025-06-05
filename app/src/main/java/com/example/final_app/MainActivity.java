@@ -47,10 +47,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @OptIn(markerClass = androidx.camera.core.ExperimentalGetImage.class)
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements BaiduSpeechRecognizer.SpeechRecognitionListener {
 
     private ActivityMainBinding binding; // 注意变量名改成小写开头
     private static final int REQUEST_CODE_CAMERA = 1001;
+    private static final int REQUEST_CODE_AUDIO = 1002;
+    private static final int REQUEST_CODE_PERMISSIONS = 1003;
+
     private PoseDetector poseDetector;
     private ExecutorService cameraExecutor;
     private ImageProxy latestImageProxy;
@@ -62,10 +65,16 @@ public class MainActivity extends AppCompatActivity {
     private final List<String> targetPoses = new ArrayList<>(); // 每关的目标姿势数据
     private String anglesFileName; // 用于保存角度数据的文件名
 
-    @OptIn(markerClass = ExperimentalGetImage.class) @Override
+    // 语音识别相关
+    private BaiduSpeechRecognizer speechRecognizer;
+    private boolean isListeningForVoiceCommands = false;
+
+    @OptIn(markerClass = ExperimentalGetImage.class)
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         currentLevel = 0;
+
         // 初始化目标姿势数据（示例）
         targetPoses.add("pos1.csv"); // 第一关目标姿势文件
         targetPoses.add("pos2.csv"); // 第二关目标姿势文件
@@ -84,44 +93,192 @@ public class MainActivity extends AppCompatActivity {
 
         cameraExecutor = Executors.newSingleThreadExecutor();
 
-        // 权限检查
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.CAMERA}, REQUEST_CODE_CAMERA);
-        } else {
-            startCamera();
-        }
+        // 初始化语音识别
+        initSpeechRecognizer();
 
+        // 权限检查
+        checkAndRequestPermissions();
 
         //文本检测更新
         textUpdate();
 
         binding.getpose.setOnClickListener(v -> {
-
             if (latestImageProxy != null) {
                 savePoseAnglesToCSV(latestImageProxy);
                 savePoseToCSV(latestImageProxy);
-//                Toast.makeText(this, "正在保存姿势数据...", Toast.LENGTH_SHORT).show();
-            } else {
-//                Toast.makeText(this, "没有可用的图像数据", Toast.LENGTH_SHORT).show();
-
             }
         });
-        binding.test.setOnClickListener(v -> testimage(anglesFileName));//getResources().getString(R .string.anglesfile_name)));
-//
-//        handler = new Handler(Looper.getMainLooper());
-//        runnable = new Runnable() {
-//            @Override
-//            public void run() {
-//                testimage(anglesFileName); // 调用 test 方法
-//                handler.postDelayed(this, 1000); // 每 0.5 秒调用一次
-//            }
-//        };
-//        handler.post(runnable); // 开始计时器
+
+        binding.test.setOnClickListener(v -> testimage(anglesFileName));
+
+        // 添加语音识别按钮点击事件（如果UI中有的话）
+        // 如果没有语音按钮，可以注释掉这部分
+        /*
+        binding.voiceButton.setOnClickListener(v -> {
+            if (speechRecognizer != null) {
+                if (speechRecognizer.isRecording()) {
+                    speechRecognizer.stopRecording();
+                } else {
+                    startVoiceRecognition();
+                }
+            }
+        });
+        */
     }
 
+    /**
+     * 初始化语音识别器
+     */
+    private void initSpeechRecognizer() {
+        speechRecognizer = new BaiduSpeechRecognizer(this);
+        speechRecognizer.setSpeechRecognitionListener(this);
+    }
 
+    /**
+     * 检查并请求所需权限
+     */
+    private void checkAndRequestPermissions() {
+        List<String> permissionsNeeded = new ArrayList<>();
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.CAMERA);
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.RECORD_AUDIO);
+        }
+
+        if (!permissionsNeeded.isEmpty()) {
+            ActivityCompat.requestPermissions(this,
+                    permissionsNeeded.toArray(new String[0]), REQUEST_CODE_PERMISSIONS);
+        } else {
+            startCamera();
+            // 可以在这里启动语音监听
+            // startVoiceRecognition();
+        }
+    }
+
+    /**
+     * 开始语音识别
+     */
+    private void startVoiceRecognition() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "需要录音权限", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (speechRecognizer != null) {
+            speechRecognizer.startRecording();
+            isListeningForVoiceCommands = true;
+        }
+    }
+
+    // 语音识别回调方法
+    @Override
+    public void onRecognitionStart() {
+        runOnUiThread(() -> {
+            Toast.makeText(this, "开始语音识别...", Toast.LENGTH_SHORT).show();
+            // 可以更新UI显示录音状态
+            // binding.voiceStatus.setText("正在录音...");
+        });
+    }
+
+    @Override
+    public void onRecognitionResult(String result) {
+        runOnUiThread(() -> {
+            Log.d("VoiceRecognition", "识别结果: " + result);
+            Toast.makeText(this, "识别结果: " + result, Toast.LENGTH_LONG).show();
+
+            // 处理语音命令
+            handleVoiceCommand(result);
+        });
+    }
+
+    @Override
+    public void onRecognitionError(String error) {
+        runOnUiThread(() -> {
+            Log.e("VoiceRecognition", "识别错误: " + error);
+            Toast.makeText(this, "语音识别错误: " + error, Toast.LENGTH_SHORT).show();
+            isListeningForVoiceCommands = false;
+        });
+    }
+
+    @Override
+    public void onRecognitionEnd() {
+        runOnUiThread(() -> {
+            Log.d("VoiceRecognition", "语音识别结束");
+            isListeningForVoiceCommands = false;
+            // 可以更新UI
+            // binding.voiceStatus.setText("点击开始录音");
+        });
+    }
+
+    /**
+     * 处理语音命令
+     */
+    private void handleVoiceCommand(String command) {
+        if (command == null || command.trim().isEmpty()) {
+            return;
+        }
+
+        String lowerCommand = command.toLowerCase().trim();
+
+        // 处理不同的语音命令
+        if (lowerCommand.contains("保存") || lowerCommand.contains("记录") || lowerCommand.contains("拍照")) {
+            // 保存当前姿势
+            if (latestImageProxy != null) {
+                savePoseAnglesToCSV(latestImageProxy);
+                savePoseToCSV(latestImageProxy);
+                Toast.makeText(this, "已保存当前姿势", Toast.LENGTH_SHORT).show();
+            }
+        } else if (lowerCommand.contains("测试") || lowerCommand.contains("检测") || lowerCommand.contains("比较")) {
+            // 测试姿势匹配
+            testimage(anglesFileName);
+        } else if (lowerCommand.contains("下一关") || lowerCommand.contains("下一个")) {
+            // 切换到下一关
+            if (currentLevel < targetPoses.size() - 1) {
+                currentLevel++;
+                anglesFileName = targetPoses.get(currentLevel);
+                Toast.makeText(this, "切换到第" + (currentLevel + 1) + "关", Toast.LENGTH_SHORT).show();
+                // 更新文本框显示
+                EditText editText = findViewById(R.id.editText);
+                if (editText != null) {
+                    editText.setText(anglesFileName);
+                }
+            } else {
+                Toast.makeText(this, "已经是最后一关了", Toast.LENGTH_SHORT).show();
+            }
+        } else if (lowerCommand.contains("上一关") || lowerCommand.contains("返回")) {
+            // 切换到上一关
+            if (currentLevel > 0) {
+                currentLevel--;
+                anglesFileName = targetPoses.get(currentLevel);
+                Toast.makeText(this, "切换到第" + (currentLevel + 1) + "关", Toast.LENGTH_SHORT).show();
+                // 更新文本框显示
+                EditText editText = findViewById(R.id.editText);
+                if (editText != null) {
+                    editText.setText(anglesFileName);
+                }
+            } else {
+                Toast.makeText(this, "已经是第一关了", Toast.LENGTH_SHORT).show();
+            }
+        } else if (lowerCommand.contains("重新开始") || lowerCommand.contains("重置")) {
+            // 重置到第一关
+            currentLevel = 0;
+            anglesFileName = targetPoses.get(currentLevel);
+            Toast.makeText(this, "重置到第一关", Toast.LENGTH_SHORT).show();
+            // 更新文本框显示
+            EditText editText = findViewById(R.id.editText);
+            if (editText != null) {
+                editText.setText(anglesFileName);
+            }
+        } else {
+            Toast.makeText(this, "未识别的命令: " + command, Toast.LENGTH_SHORT).show();
+        }
+    }
 
     private void startCamera() {
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
@@ -184,8 +341,6 @@ public class MainActivity extends AppCompatActivity {
                                     .append(landmark.getPosition().y).append("\n");
                         });
 
-
-
                         // 写入数据到文件
                         try (FileWriter writer = new FileWriter(csvFile, false)) {
                             // 写入 CSV 表头（如果文件为空）
@@ -195,7 +350,6 @@ public class MainActivity extends AppCompatActivity {
                             writer.append(csvData.toString());
                             writer.flush();
                         } catch (Exception e) {
-//                            Toast.makeText(this, "保存失败", Toast.LENGTH_SHORT).show();
                             Log.e("CSV", "Failed to write pose data", e);
                         }
                     })
@@ -206,97 +360,95 @@ public class MainActivity extends AppCompatActivity {
             imageProxy.close();
         }
     }
-//判断
-public void testimage( String path) {
-    File csvFile = new File(getExternalFilesDir(null), path);
-    if (!csvFile.exists()) {
-//        Toast.makeText(this, "CSV 文件不存在", Toast.LENGTH_SHORT).show();
-        Log.e("CSV", "CSV 文件不存在: " + csvFile.getAbsolutePath());
-        return;
-    }
-    anglesFileName = targetPoses.get(currentLevel); // 获取当前关卡的目标姿势文件名
-    try {
-        // 读取 CSV 文件中的姿势数据
-        List<String> savedPoseData = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
-            String line;
-            int lineNumber = 0;
-            while ((line = reader.readLine()) != null) {
-                lineNumber++;
-                if (lineNumber == 1 && line.contains("Landmark, Angle")) {
-                    // 跳过表头
-                    continue;
-                }
-                if (!line.trim().isEmpty() && line.contains(",")) {
-                    savedPoseData.add(line);
-                } else {
-                    Log.w("CSV", "跳过无效行: " + lineNumber + " 内容: " + line);
-                }
-            }
-        }
 
-        if (savedPoseData.isEmpty()) {
-//            Toast.makeText(this, "CSV 文件没有有效数据", Toast.LENGTH_SHORT).show();
-            Log.e("CSV", "CSV 文件没有有效数据");
+    //判断
+    public void testimage(String path) {
+        File csvFile = new File(getExternalFilesDir(null), path);
+        if (!csvFile.exists()) {
+            Log.e("CSV", "CSV 文件不存在: " + csvFile.getAbsolutePath());
             return;
         }
-
-        Log.d("CSV", "成功读取 CSV 文件: " + savedPoseData.size() + " 行数据");
-
-        // 获取当前姿势数据
-        if (latestImageProxy != null) {
-            Image mediaImage = latestImageProxy.getImage();
-            if (mediaImage != null) {
-                InputImage currentImage = InputImage.fromMediaImage(mediaImage,
-                        latestImageProxy.getImageInfo().getRotationDegrees());
-
-                poseDetector.process(currentImage)
-                        .addOnSuccessListener(pose -> {
-                            List<String> currentPoseData = new ArrayList<>();
-                            List<PoseLandmark> landmarks = pose.getAllPoseLandmarks();
-                            // 计算当前角度数据
-                            for (int i = 0; i < landmarks.size() - 2; i++) {
-                                PoseLandmark first = landmarks.get(i);
-                                PoseLandmark mid = landmarks.get(i + 1);
-                                PoseLandmark last = landmarks.get(i + 2);
-
-                                double angle = getAngle(first, mid, last);
-                                currentPoseData.add(mid.getLandmarkType() + ", " + angle);
-                            }
-                            // 比较姿势数据
-                            if (isPoseSimilarByAngle(savedPoseData, currentPoseData, 20.0)) { // 允许误差为 10.0 度
-                                if(currentLevel < targetPoses.size() - 1) {
-                                    currentLevel++; // 进入下一关
-                            Toast.makeText(this, "姿势一致，进入下一关"+currentLevel, Toast.LENGTH_SHORT).show();
-                                    anglesFileName = targetPoses.get(currentLevel);
-                                } else {
-                                    currentLevel = 0; // 重置关卡
-                                    Toast.makeText(this, "姿势一致", Toast.LENGTH_SHORT).show();
-                                    Intent intent = new Intent(this, CameraPageActivity.class);
-                                    startActivity(intent);
-                                }
-
-                            } else {
-//                               Toast.makeText(this, "姿势不一致", Toast.LENGTH_SHORT).show();
-                            }
-                        })
-                        .addOnFailureListener(e -> {
-//                            Toast.makeText(this, "检测当前姿势失败", Toast.LENGTH_SHORT).show();
-                            Log.e("PoseDetection", "Failed to detect current pose", e);
-                        });
-            } else {
-//                Toast.makeText(this, "没有可用的图像数据", Toast.LENGTH_SHORT).show();
-                Log.e("PoseDetection", "MediaImage is null");
+        anglesFileName = targetPoses.get(currentLevel); // 获取当前关卡的目标姿势文件名
+        try {
+            // 读取 CSV 文件中的姿势数据
+            List<String> savedPoseData = new ArrayList<>();
+            try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
+                String line;
+                int lineNumber = 0;
+                while ((line = reader.readLine()) != null) {
+                    lineNumber++;
+                    if (lineNumber == 1 && line.contains("Landmark, Angle")) {
+                        // 跳过表头
+                        continue;
+                    }
+                    if (!line.trim().isEmpty() && line.contains(",")) {
+                        savedPoseData.add(line);
+                    } else {
+                        Log.w("CSV", "跳过无效行: " + lineNumber + " 内容: " + line);
+                    }
+                }
             }
-        } else {
-//            Toast.makeText(this, "没有可用的图像数据", Toast.LENGTH_SHORT).show();
-            Log.e("PoseDetection", "Latest ImageProxy is null");
+
+            if (savedPoseData.isEmpty()) {
+                Log.e("CSV", "CSV 文件没有有效数据");
+                return;
+            }
+
+            Log.d("CSV", "成功读取 CSV 文件: " + savedPoseData.size() + " 行数据");
+
+            // 获取当前姿势数据
+            if (latestImageProxy != null) {
+                Image mediaImage = latestImageProxy.getImage();
+                if (mediaImage != null) {
+                    InputImage currentImage = InputImage.fromMediaImage(mediaImage,
+                            latestImageProxy.getImageInfo().getRotationDegrees());
+
+                    poseDetector.process(currentImage)
+                            .addOnSuccessListener(pose -> {
+                                List<String> currentPoseData = new ArrayList<>();
+                                List<PoseLandmark> landmarks = pose.getAllPoseLandmarks();
+                                // 计算当前角度数据
+                                for (int i = 0; i < landmarks.size() - 2; i++) {
+                                    PoseLandmark first = landmarks.get(i);
+                                    PoseLandmark mid = landmarks.get(i + 1);
+                                    PoseLandmark last = landmarks.get(i + 2);
+
+                                    double angle = getAngle(first, mid, last);
+                                    currentPoseData.add(mid.getLandmarkType() + ", " + angle);
+                                }
+                                // 比较姿势数据
+                                if (isPoseSimilarByAngle(savedPoseData, currentPoseData, 20.0)) { // 允许误差为 20.0 度
+                                    if(currentLevel < targetPoses.size() - 1) {
+                                        currentLevel++; // 进入下一关
+                                        Toast.makeText(this, "姿势一致，进入下一关"+currentLevel, Toast.LENGTH_SHORT).show();
+                                        anglesFileName = targetPoses.get(currentLevel);
+                                        // 更新文本框显示
+                                        EditText editText = findViewById(R.id.editText);
+                                        if (editText != null) {
+                                            editText.setText(anglesFileName);
+                                        }
+                                    } else {
+                                        currentLevel = 0; // 重置关卡
+                                        Toast.makeText(this, "姿势一致", Toast.LENGTH_SHORT).show();
+                                        Intent intent = new Intent(this, CameraPageActivity.class);
+                                        startActivity(intent);
+                                    }
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e("PoseDetection", "Failed to detect current pose", e);
+                            });
+                } else {
+                    Log.e("PoseDetection", "MediaImage is null");
+                }
+            } else {
+                Log.e("PoseDetection", "Latest ImageProxy is null");
+            }
+        } catch (Exception e) {
+            Log.e("CSV", "Failed to read CSV file", e);
         }
-    } catch (Exception e) {
-//        Toast.makeText(this, "读取 CSV 文件失败", Toast.LENGTH_SHORT).show();
-        Log.e("CSV", "Failed to read CSV file", e);
     }
-}
+
     private boolean isPoseSimilarByAngle(List<String> savedPoseData, List<String> currentPoseData, double tolerance) {
         if (savedPoseData.size() != currentPoseData.size()) {
             return false; // 数据长度不一致
@@ -329,6 +481,7 @@ public void testimage( String path) {
         // 判断符合误差范围的角度是否达到 85%
         return matchCount >= totalCount * 0.85;
     }
+
     private boolean isPoseSimilar(List<String> savedPoseData, List<String> currentPoseData, double tolerance) {
         if (savedPoseData.size() != currentPoseData.size()) {
             return false; // 数据长度不一致
@@ -361,6 +514,7 @@ public void testimage( String path) {
 
         return true; // 所有关键点都在误差范围内
     }
+
     static double getAngle(PoseLandmark firstPoint, PoseLandmark midPoint, PoseLandmark lastPoint) {
         double result =
                 Math.toDegrees(
@@ -374,6 +528,7 @@ public void testimage( String path) {
         }
         return result;
     }
+
     private void savePoseAnglesToCSV(@NonNull ImageProxy imageProxy) {
         Image mediaImage = imageProxy.getImage();
         if (mediaImage == null) {
@@ -427,10 +582,10 @@ public void testimage( String path) {
         SharedPreferences sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
 
-// 初始化文本框内容
+        // 初始化文本框内容
         editText.setText(anglesFileName);
 
-// 监听文本框输入变化
+        // 监听文本框输入变化
         editText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -443,8 +598,8 @@ public void testimage( String path) {
             @Override
             public void afterTextChanged(Editable s) {}
         });
-
     }
+
     private class PoseAnalyzer implements ImageAnalysis.Analyzer {
 
         @androidx.camera.core.ExperimentalGetImage
@@ -474,7 +629,6 @@ public void testimage( String path) {
             } else {
                 imageProxy.close();
             }
-
         }
     }
 
@@ -482,14 +636,34 @@ public void testimage( String path) {
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_CODE_CAMERA &&
-                grantResults.length > 0 &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            startCamera();
-        } else {
-            Log.e("Permission", "Camera permission denied");
-        }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_CODE_PERMISSIONS) {
+            boolean cameraGranted = false;
+            boolean audioGranted = false;
+
+            for (int i = 0; i < permissions.length; i++) {
+                if (permissions[i].equals(Manifest.permission.CAMERA) &&
+                        grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                    cameraGranted = true;
+                }
+                if (permissions[i].equals(Manifest.permission.RECORD_AUDIO) &&
+                        grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                    audioGranted = true;
+                }
+            }
+
+            if (cameraGranted) {
+                startCamera();
+            } else {
+                Log.e("Permission", "Camera permission denied");
+            }
+
+            if (!audioGranted) {
+                Log.e("Permission", "Audio permission denied");
+                Toast.makeText(this, "语音功能需要录音权限", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @Override
@@ -500,5 +674,41 @@ public void testimage( String path) {
         if (handler != null && runnable != null) {
             handler.removeCallbacks(runnable); // 停止计时器
         }
+        // 释放语音识别资源
+        if (speechRecognizer != null) {
+            speechRecognizer.release();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // 暂停时停止语音识别
+        if (speechRecognizer != null && speechRecognizer.isRecording()) {
+            speechRecognizer.stopRecording();
+        }
+    }
+
+    /**
+     * 提供给外部调用的语音识别启动方法
+     */
+    public void startVoiceCommand() {
+        startVoiceRecognition();
+    }
+
+    /**
+     * 提供给外部调用的语音识别停止方法
+     */
+    public void stopVoiceCommand() {
+        if (speechRecognizer != null) {
+            speechRecognizer.stopRecording();
+        }
+    }
+
+    /**
+     * 检查是否正在进行语音识别
+     */
+    public boolean isListeningForVoice() {
+        return isListeningForVoiceCommands;
     }
 }
