@@ -111,9 +111,6 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
 
         binding.test.setOnClickListener(v -> testimage(anglesFileName));
 
-        // 添加语音识别按钮点击事件（如果UI中有的话）
-        // 如果没有语音按钮，可以注释掉这部分
-        /*
         binding.voiceButton.setOnClickListener(v -> {
             if (speechRecognizer != null) {
                 if (speechRecognizer.isRecording()) {
@@ -123,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
                 }
             }
         });
-        */
+
     }
 
     /**

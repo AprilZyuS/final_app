@@ -67,7 +67,7 @@
             tools:ignore="MissingConstraints" />
 
         <Button
-            android:id="@+id/btn_start_recognition"
+            android:id="@+id/voiceButton"
             android:layout_width="84dp"
             android:layout_height="36dp"
             android:layout_marginStart="16dp"
