@@ -15,6 +15,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.OptIn;
@@ -195,7 +196,7 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
     @Override
     public void onRecognitionStart() {
         runOnUiThread(() -> {
-            Toast.makeText(this, "开始语音识别...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "请喊出口令", Toast.LENGTH_SHORT).show();
             // 可以更新UI显示录音状态
             // binding.voiceStatus.setText("正在录音...");
         });
@@ -631,12 +632,27 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
     /**
      * 下一关
      */
-    private void NextLevel()
-    {
-        if(currentLevel < targetPoses.size() - 1) {
+    private void NextLevel() {
+        ImageView imageView = findViewById(R.id.imageView4);
+
+        if (currentLevel < targetPoses.size() - 1) {
             currentLevel++; // 进入下一关
-            Toast.makeText(this, "姿势一致，进入下一关"+currentLevel, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "姿势一致，进入下一关" + currentLevel, Toast.LENGTH_SHORT).show();
             anglesFileName = targetPoses.get(currentLevel);
+
+            // 更新 ImageView 图片
+            switch (currentLevel) {
+                case 0:
+                    imageView.setImageResource(R.drawable.l1);
+                    break;
+                case 1:
+                    imageView.setImageResource(R.drawable.l2);
+                    break;
+                case 2:
+                    imageView.setImageResource(R.drawable.l3);
+                    break;
+            }
+
             // 更新文本框显示
             EditText editText = findViewById(R.id.editText);
             if (editText != null) {
@@ -644,9 +660,13 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
             }
         } else {
             currentLevel = 0; // 重置关卡
-            cur_result =" ";
-            Toast.makeText(this, "restart", Toast.LENGTH_SHORT).show();
+            cur_result = " ";
+         //   Toast.makeText(this, "restart", Toast.LENGTH_SHORT).show();
             anglesFileName = targetPoses.get(currentLevel);
+
+            // 重置 ImageView 图片
+            imageView.setImageResource(R.drawable.l1);
+
             // 更新文本框显示
             EditText editText = findViewById(R.id.editText);
             if (editText != null) {
