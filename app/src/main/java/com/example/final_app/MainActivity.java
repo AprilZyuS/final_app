@@ -41,6 +41,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -60,9 +61,12 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
 
     private Handler handler;
     private Runnable runnable;
-
+    private Handler handler1;
+    private Runnable runnable1;
     private int currentLevel = 0; // 当前关卡
     private final List<String> targetPoses = new ArrayList<>(); // 每关的目标姿势数据
+    private final List<String> StrData = new ArrayList<>();
+    private String cur_result = ""; //
     private String anglesFileName; // 用于保存角度数据的文件名
 
     // 语音识别相关
@@ -79,6 +83,9 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
         targetPoses.add("pos1.csv"); // 第一关目标姿势文件
         targetPoses.add("pos2.csv"); // 第二关目标姿势文件
         targetPoses.add("pos3.csv"); // 第三关目标姿势文件
+        StrData.add("你好"); // 第一关目标字符串
+        StrData.add("哈哈"); // 第二关目标字符串
+        StrData.add("不行"); // 第三关目标字符串
         anglesFileName = targetPoses.get(currentLevel); // 初始化为第一关的目标姿势文件名
 
         // 初始化 DataBinding
@@ -110,6 +117,17 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
         });
 
         binding.test.setOnClickListener(v -> testimage(anglesFileName));
+        // 定时器：每2秒调用一次testimage
+        handler1 = new Handler(Looper.getMainLooper());
+        runnable1 = new Runnable() {
+            @Override
+            public void run() {
+                testimage(anglesFileName);
+                handler1.postDelayed(this, 2000); // 2秒后再次执行
+            }
+        };
+        handler1.post(runnable1); // 启动定时器
+
 
         binding.voiceButton.setOnClickListener(v -> {
             if (speechRecognizer != null) {
@@ -187,10 +205,15 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
     public void onRecognitionResult(String result) {
         runOnUiThread(() -> {
             Log.d("VoiceRecognition", "识别结果: " + result);
-            Toast.makeText(this, "识别结果: " + result, Toast.LENGTH_LONG).show();
+           // Toast.makeText(this, "识别结果: " + result, Toast.LENGTH_LONG).show();
 
             // 处理语音命令
-            handleVoiceCommand(result);
+            cur_result = result;
+            if(StrComparison(cur_result,StrData.get(currentLevel)))
+            {
+                    NextLevel();
+            }
+            //handleVoiceCommand(result);
         });
     }
 
@@ -415,21 +438,7 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
                                 }
                                 // 比较姿势数据
                                 if (isPoseSimilarByAngle(savedPoseData, currentPoseData, 20.0)) { // 允许误差为 20.0 度
-                                    if(currentLevel < targetPoses.size() - 1) {
-                                        currentLevel++; // 进入下一关
-                                        Toast.makeText(this, "姿势一致，进入下一关"+currentLevel, Toast.LENGTH_SHORT).show();
-                                        anglesFileName = targetPoses.get(currentLevel);
-                                        // 更新文本框显示
-                                        EditText editText = findViewById(R.id.editText);
-                                        if (editText != null) {
-                                            editText.setText(anglesFileName);
-                                        }
-                                    } else {
-                                        currentLevel = 0; // 重置关卡
-                                        Toast.makeText(this, "姿势一致", Toast.LENGTH_SHORT).show();
-                                        Intent intent = new Intent(this, CameraPageActivity.class);
-                                        startActivity(intent);
-                                    }
+
                                 }
                             })
                             .addOnFailureListener(e -> {
@@ -474,7 +483,16 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
                 Log.e("PoseComparison", "数据格式错误", e);
             }
         }
+        //开始成功语言识别
+         if(matchCount>= totalCount*0.85) {
+             if (speechRecognizer != null) {
+                 if (speechRecognizer.isRecording()) {
 
+                 } else {
+                     startVoiceRecognition();
+                 }
+             }
+           }
         // 判断符合误差范围的角度是否达到 85%
         return matchCount >= totalCount * 0.85;
     }
@@ -595,8 +613,49 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
             @Override
             public void afterTextChanged(Editable s) {}
         });
+
+    }
+    /**
+     * 字符串比较方法
+     * @param str1 第一个字符串
+     * @param str2 答案字符串
+     * @return 如果 str1 包含 str2，返回 true；否则返回 false
+     */
+    public boolean StrComparison(String str1, String str2) {
+        if (str1 == null || str2 == null) {
+            return false; // 如果任一字符串为 null，返回 false
+        }
+        return str1.contains(str2);
     }
 
+    /**
+     * 下一关
+     */
+    private void NextLevel()
+    {
+        if(currentLevel < targetPoses.size() - 1) {
+            currentLevel++; // 进入下一关
+            Toast.makeText(this, "姿势一致，进入下一关"+currentLevel, Toast.LENGTH_SHORT).show();
+            anglesFileName = targetPoses.get(currentLevel);
+            // 更新文本框显示
+            EditText editText = findViewById(R.id.editText);
+            if (editText != null) {
+                editText.setText(anglesFileName);
+            }
+        } else {
+            currentLevel = 0; // 重置关卡
+            cur_result =" ";
+            Toast.makeText(this, "restart", Toast.LENGTH_SHORT).show();
+            anglesFileName = targetPoses.get(currentLevel);
+            // 更新文本框显示
+            EditText editText = findViewById(R.id.editText);
+            if (editText != null) {
+                editText.setText(anglesFileName);
+            }
+            Intent intent = new Intent(this, CameraPageActivity.class);
+            startActivity(intent);
+        }
+    }
     private class PoseAnalyzer implements ImageAnalysis.Analyzer {
 
         @androidx.camera.core.ExperimentalGetImage
@@ -708,4 +767,5 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
     public boolean isListeningForVoice() {
         return isListeningForVoiceCommands;
     }
+
 }

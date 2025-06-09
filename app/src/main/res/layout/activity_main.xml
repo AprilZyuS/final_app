@@ -74,7 +74,7 @@
             android:layout_marginBottom="16dp"
             android:text="haha!"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@id/getpose"
+            app:layout_constraintBottom_toTopOf="@+id/test"
             tools:ignore="MissingConstraints" />
 
         <EditText

@@ -200,9 +200,9 @@ public class BaiduSpeechRecognizer {
         byte[] buffer = new byte[BUFFER_SIZE];
 
         try {
-            // 录音5秒
+            // 录音3秒
             long startTime = System.currentTimeMillis();
-            long maxRecordTime = 5000; // 5秒
+            long maxRecordTime = 3000; // 3秒
 
             while (isRecording && (System.currentTimeMillis() - startTime) < maxRecordTime) {
                 int bytesRead = audioRecord.read(buffer, 0, buffer.length);
