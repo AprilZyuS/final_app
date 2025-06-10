@@ -16,6 +16,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.OptIn;
@@ -109,6 +110,8 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
 
         //文本检测更新
         textUpdate();
+        TextView textView = findViewById(R.id.commandText);
+        textView .setText(StrData.get(currentLevel));
 
         binding.getpose.setOnClickListener(v -> {
             if (latestImageProxy != null) {
@@ -538,9 +541,9 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
                                 lastPoint.getPosition().x - midPoint.getPosition().x)
                                 - atan2(firstPoint.getPosition().y - midPoint.getPosition().y,
                                 firstPoint.getPosition().x - midPoint.getPosition().x));
-        result = Math.abs(result); // Angle should never be negative
+        result = Math.abs(result);
         if (result > 180) {
-            result = (360.0 - result); // Always get the acute representation of the angle
+            result = (360.0 - result);
         }
         return result;
     }
@@ -634,7 +637,7 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
      */
     private void NextLevel() {
         ImageView imageView = findViewById(R.id.imageView4);
-
+        TextView tv = findViewById(R.id.commandText);
         if (currentLevel < targetPoses.size() - 1) {
             currentLevel++; // 进入下一关
             Toast.makeText(this, "姿势一致，进入下一关" + currentLevel, Toast.LENGTH_SHORT).show();
@@ -644,12 +647,15 @@ public class MainActivity extends AppCompatActivity implements BaiduSpeechRecogn
             switch (currentLevel) {
                 case 0:
                     imageView.setImageResource(R.drawable.l1);
+                    tv.setText(StrData.get(currentLevel));
                     break;
                 case 1:
                     imageView.setImageResource(R.drawable.l2);
+                    tv.setText(StrData.get(currentLevel));
                     break;
                 case 2:
                     imageView.setImageResource(R.drawable.l3);
+                    tv.setText(StrData.get(currentLevel));
                     break;
             }
 

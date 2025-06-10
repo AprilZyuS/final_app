@@ -34,6 +34,8 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent" />
 
+
+
         <TextView
             android:id="@+id/Text1"
             android:layout_width="match_parent"
@@ -70,12 +72,12 @@
             android:id="@+id/voiceButton"
             android:layout_width="84dp"
             android:layout_height="36dp"
-            android:layout_marginStart="16dp"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="8dp"
             android:text="haha!"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/test"
-            tools:ignore="MissingConstraints" />
+            tools:ignore="MissingConstraints"
+            tools:layout_editor_absoluteX="116dp" />
 
         <EditText
             android:id="@+id/editText"
@@ -88,7 +90,32 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/test"
             tools:ignore="MissingConstraints" />
+        <FrameLayout
+            android:id="@+id/imageView5Container"
+            android:layout_width="match_parent"
+            android:layout_height="134dp"
+            app:layout_constraintBottom_toBottomOf="@+id/imageView4"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent">
 
+            <ImageView
+                android:id="@+id/imageView5"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitXY"
+                app:srcCompat="@drawable/starheavn" />
+
+            <TextView
+                android:id="@+id/commandText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="口令"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:background="#80000000"
+                android:padding="8dp" />
+        </FrameLayout>
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>
